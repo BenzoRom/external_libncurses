@@ -671,7 +671,7 @@
 ./man/keyok.3x
 ./man/legacy_coding.3x
 ./man/make_sed.sh
-./man/man_db.renames
+./man/man_db.renames.in
 ./man/manhtml.aliases
 ./man/manhtml.externs
 ./man/manlinks.sed
@@ -1216,6 +1216,7 @@
 ./test/test_addstr.c
 ./test/test_addwstr.c
 ./test/test_arrays.c
+./test/test_delwin.c
 ./test/test_get_wstr.c
 ./test/test_getstr.c
 ./test/test_instr.c

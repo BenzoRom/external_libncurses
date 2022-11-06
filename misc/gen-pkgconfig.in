@@ -1,5 +1,5 @@
 #!@SHELL@
-# $Id: gen-pkgconfig.in,v 1.54 2022/07/26 20:19:50 tom Exp $
+# $Id: gen-pkgconfig.in,v 1.56 2022/10/08 16:45:20 tom Exp $
 ##############################################################################
 # Copyright 2018-2021,2022 Thomas E. Dickey                                  #
 # Copyright 2009-2015,2018 Free Software Foundation, Inc.                    #
@@ -103,7 +103,11 @@ do
 		;;
 	-L*)
 		lib_check=`echo "x$opt" | sed -e 's/^.-L//'`
-		[ -d "$lib_check" ] || continue
+		# on a new/nonstandard install, $libdir may not yet exist at this point
+		if [ "$libdir" != "$lib_check" ]
+		then
+			[ -d "$lib_check" ] || continue
+		fi
 		case "$lib_check" in
 		@LD_SEARCHPATH@) # skip standard libdir
 			if [ "$lib_check" = "$libdir" ]
@@ -170,7 +174,7 @@ fi
 
 # The "URL" feature came in pkg-config 0.17
 USEURL=""
-CFGVER=`pkg-config --version 2>/dev/null |head -n 1 | awk -F. '/0.[0-9][0-9]/{print $2;}'`
+CFGVER=`${PKG_CONFIG:-pkg-config} --version 2>/dev/null |head -n 1 | awk -F. '/0.[0-9][0-9]/{print $2;}'`
 # A missing version should simply fail, but some packagers insist on building
 # packages on machines which do not actually have the tools they depend on at
 # runtime.

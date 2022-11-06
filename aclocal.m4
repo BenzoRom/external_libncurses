@@ -29,7 +29,7 @@ dnl***************************************************************************
 dnl
 dnl Author: Thomas E. Dickey 1995-on
 dnl
-dnl $Id: aclocal.m4,v 1.1007 2022/07/27 23:34:31 tom Exp $
+dnl $Id: aclocal.m4,v 1.1023 2022/11/05 20:13:19 tom Exp $
 dnl Macros used in NCURSES auto-configuration script.
 dnl
 dnl These macros are maintained separately from NCURSES.  The copyright on
@@ -739,7 +739,7 @@ if test "$cf_cv_type_of_bool" = unknown ; then
 fi
 ])dnl
 dnl ---------------------------------------------------------------------------
-dnl CF_BUILD_CC version: 9 updated: 2021/01/02 09:31:20
+dnl CF_BUILD_CC version: 10 updated: 2022/09/24 16:36:41
 dnl -----------
 dnl If we're cross-compiling, allow the user to override the tools and their
 dnl options.  The configure script is oriented toward identifying the host
@@ -805,7 +805,30 @@ if test "$cross_compiling" = yes ; then
 
 	: ${BUILD_CC:='${CC}'}
 
-	if { test "$BUILD_CC" = "$CC" || test "$BUILD_CC" = '${CC}'; } ; then
+	AC_MSG_CHECKING(if the build-compiler "$BUILD_CC" works)
+
+	cf_save_crossed=$cross_compiling
+	cf_save_ac_link=$ac_link
+	cross_compiling=no
+	ac_link='$BUILD_CC -o "conftest$ac_exeext" $BUILD_CFLAGS $BUILD_CPPFLAGS $BUILD_LDFLAGS "conftest.$ac_ext" $BUILD_LIBS >&AS_MESSAGE_LOG_FD'
+
+	AC_TRY_RUN([#include <stdio.h>
+		int main(int argc, char *argv[])
+		{
+			${cf_cv_main_return:-return}(argc < 0 || argv == 0 || argv[0] == 0);
+		}
+	],
+		cf_ok_build_cc=yes,
+		cf_ok_build_cc=no,
+		cf_ok_build_cc=unknown)
+
+	cross_compiling=$cf_save_crossed
+	ac_link=$cf_save_ac_link
+
+	AC_MSG_RESULT($cf_ok_build_cc)
+
+	if test "$cf_ok_build_cc" != yes
+	then
 		AC_MSG_ERROR([Cross-build requires two compilers.
 Use --with-build-cc to specify the native compiler.])
 	fi
@@ -1729,6 +1752,42 @@ case "$cf_cv_const_x_string" in
 esac
 
 ])
+])dnl
+dnl ---------------------------------------------------------------------------
+dnl CF_CPP_OVERRIDE version: 1 updated: 2022/08/20 16:07:10
+dnl ---------------
+dnl Check if the C++ compiler accepts the override keyword.  This is a C++-11
+dnl feature.
+AC_DEFUN([CF_CPP_OVERRIDE],
+[
+if test -n "$CXX"; then
+AC_CACHE_CHECK(if $CXX accepts override keyword,cf_cv_cpp_override,[
+	AC_LANG_SAVE
+	AC_LANG_CPLUSPLUS
+	AC_TRY_RUN([
+
+class base
+{
+public:
+	virtual int foo(float x) = 0; 
+};
+
+
+class derived: public base
+{
+public:
+	int foo(float x) override { return x != 0.0 ? 1 : 0; }
+};
+
+int main(void) { }
+],
+	[cf_cv_cpp_override=yes],
+	[cf_cv_cpp_override=no],
+	[cf_cv_cpp_override=unknown])
+	AC_LANG_RESTORE
+])
+fi
+test "$cf_cv_cpp_override" = yes && AC_DEFINE(CPP_HAS_OVERRIDE,1,[Define to 1 if C++ has override keyword])
 ])dnl
 dnl ---------------------------------------------------------------------------
 dnl CF_CPP_PARAM_INIT version: 7 updated: 2017/01/21 11:06:25
@@ -4273,7 +4332,7 @@ then
 fi
 ])dnl
 dnl ---------------------------------------------------------------------------
-dnl CF_LD_SEARCHPATH version: 3 updated: 2021/03/05 19:13:35
+dnl CF_LD_SEARCHPATH version: 4 updated: 2022/08/27 15:43:08
 dnl ----------------
 dnl Try to obtain the linker's search-path, for use in scripts.
 dnl
@@ -4284,7 +4343,7 @@ AC_CACHE_CHECK(for linker search path,cf_cv_ld_searchpath,[
 if test "$cross_compiling" != yes ; then
 
 # GNU binutils' ld does not involve permissions which may stop ldconfig.
-cf_pathlist=`ld --verbose 2>/dev/null | grep SEARCH_DIR | sed -e 's,SEARCH_DIR[[("=]][[("=]]*,,g' -e 's/"[[)]];//gp' | sort -u`
+cf_pathlist=`${LD:-ld} --verbose 2>/dev/null | grep SEARCH_DIR | sed -e 's,SEARCH_DIR[[("=]][[("=]]*,,g' -e 's/"[[)]];//gp' | sort -u`
 
 # The -NX options tell newer versions of Linux ldconfig to not attempt to
 # update the cache, which makes it run faster.
@@ -5522,13 +5581,16 @@ AC_SUBST(MAKE_UPPER_TAGS)
 AC_SUBST(MAKE_LOWER_TAGS)
 ])dnl
 dnl ---------------------------------------------------------------------------
-dnl CF_MANPAGE_FORMAT version: 15 updated: 2021/09/04 06:35:04
+dnl CF_MANPAGE_FORMAT version: 16 updated: 2022/11/05 16:12:11
 dnl -----------------
 dnl Option to allow user to override automatic configuration of manpage format.
 dnl There are several special cases:
 dnl
-dnl	gzip - man checks for, can display gzip'd files
 dnl	compress - man checks for, can display compressed files
+dnl	bzip2 - man checks for, can display bzip2'd files
+dnl	gzip - man checks for, can display gzip'd files
+dnl	xz - man checks for, can display xz'd files
+dnl
 dnl	BSDI - files in the cat-directories are suffixed ".0"
 dnl	formatted - installer should format (put files in cat-directory)
 dnl	catonly - installer should only format, e.g., for a turnkey system.
@@ -5542,8 +5604,9 @@ AC_REQUIRE([CF_PATHSEP])
 AC_MSG_CHECKING(format of man-pages)
 
 AC_ARG_WITH(manpage-format,
-	[  --with-manpage-format   specify manpage-format: gzip/compress/BSDI/normal and
-                          optionally formatted/catonly, e.g., gzip,formatted],
+	[  --with-manpage-format   specify manpage-format: gzip/compress/bzip2/xz,
+                          BSDI/normal and optionally formatted/catonly,
+                          e.g., gzip,formatted],
 	[MANPAGE_FORMAT=$withval],
 	[MANPAGE_FORMAT=unknown])
 
@@ -5573,10 +5636,12 @@ case "$MANPAGE_FORMAT" in
 			if test "x$cf_test" = "x$cf_name" ; then
 
 				case "$cf_name" in
-				(*.gz) MANPAGE_FORMAT="$MANPAGE_FORMAT gzip";;
-				(*.Z)  MANPAGE_FORMAT="$MANPAGE_FORMAT compress";;
-				(*.0)  MANPAGE_FORMAT="$MANPAGE_FORMAT BSDI";;
-				(*)    MANPAGE_FORMAT="$MANPAGE_FORMAT normal";;
+				(*.bz2) MANPAGE_FORMAT="$MANPAGE_FORMAT bzip2";;
+				(*.xz)  MANPAGE_FORMAT="$MANPAGE_FORMAT xz";;
+				(*.gz)  MANPAGE_FORMAT="$MANPAGE_FORMAT gzip";;
+				(*.Z)   MANPAGE_FORMAT="$MANPAGE_FORMAT compress";;
+				(*.0)   MANPAGE_FORMAT="$MANPAGE_FORMAT BSDI";;
+				(*)     MANPAGE_FORMAT="$MANPAGE_FORMAT normal";;
 				esac
 
 				case "$cf_name" in
@@ -5615,7 +5680,7 @@ case "$MANPAGE_FORMAT" in
 (*)
 	for cf_option in $MANPAGE_FORMAT; do
 	case "$cf_option" in
-	(gzip|compress|BSDI|normal|formatted|catonly)
+	(xz|bzip2|gzip|compress|BSDI|normal|formatted|catonly)
 		;;
 	(*)
 		cf_unknown="$cf_unknown $cf_option"
@@ -5631,7 +5696,7 @@ if test -n "$cf_unknown" ; then
 fi
 ])dnl
 dnl ---------------------------------------------------------------------------
-dnl CF_MANPAGE_RENAMES version: 12 updated: 2021/01/01 16:53:59
+dnl CF_MANPAGE_RENAMES version: 17 updated: 2022/10/23 07:46:29
 dnl ------------------
 dnl The Debian people have their own naming convention for manpages.  This
 dnl option lets us override the name of the file containing renaming, or
@@ -5651,27 +5716,19 @@ case ".$MANPAGE_RENAMES" in
 (.|.yes)
 	# Debian 'man' program?
 	if test -f /etc/debian_version ; then
-		MANPAGE_RENAMES=`cd "$srcdir" && pwd`/man/man_db.renames
+		MANPAGE_RENAMES=man/man_db.renames
 	else
 		MANPAGE_RENAMES=no
 	fi
 	;;
 esac
 
-if test "$MANPAGE_RENAMES" != no ; then
-	if test -f "$srcdir/man/$MANPAGE_RENAMES" ; then
-		MANPAGE_RENAMES=`cd "$srcdir/man" && pwd`/$MANPAGE_RENAMES
-	elif test ! -f "$MANPAGE_RENAMES" ; then
-		AC_MSG_ERROR(not a filename: $MANPAGE_RENAMES)
-	fi
-
-	test ! -d man && mkdir man
-
-	# Construct a sed-script to perform renaming within man-pages
-	if test -n "$MANPAGE_RENAMES" ; then
-		test ! -d man && mkdir man
-		$SHELL "$srcdir/man/make_sed.sh" "$MANPAGE_RENAMES" >./edit_man.sed
-	fi
+if test "$MANPAGE_RENAMES" = man/man_db.renames ; then
+	MANPAGE_RENAMES=`pwd`/$MANPAGE_RENAMES
+elif test "$MANPAGE_RENAMES" = no ; then
+	:
+elif test ! -f "$MANPAGE_RENAMES" ; then
+	AC_MSG_ERROR(not a filename: $MANPAGE_RENAMES)
 fi
 
 AC_MSG_RESULT($MANPAGE_RENAMES)
@@ -5740,7 +5797,7 @@ AC_ARG_WITH(manpage-tbl,
 AC_MSG_RESULT($MANPAGE_TBL)
 ])dnl
 dnl ---------------------------------------------------------------------------
-dnl CF_MAN_PAGES version: 52 updated: 2022/02/05 12:31:08
+dnl CF_MAN_PAGES version: 54 updated: 2022/11/05 16:12:11
 dnl ------------
 dnl Try to determine if the man-pages on the system are compressed, and if
 dnl so, what format is used.  Use this information to construct a script that
@@ -5778,16 +5835,27 @@ test ! -d man && mkdir man
 
 cf_so_strip=
 cf_compress=
-case "$MANPAGE_FORMAT" in
-(*compress*)
+for cf_manpage_format in $MANPAGE_FORMAT
+do
+case "$cf_manpage_format" in
+(compress)
 	cf_so_strip="Z"
 	cf_compress=compress
 	;;
-(*gzip*)
+(gzip)
 	cf_so_strip="gz"
 	cf_compress=gzip
 	;;
+(bzip2)
+	cf_so_strip="bz2"
+	cf_compress=bzip2
+	;;
+(xz)
+	cf_so_strip="xz"
+	cf_compress=xz
+	;;
 esac
+done
 
 cf_edit_man=./edit_man.sh
 cf_man_alias=`pwd`/man_alias.sed
@@ -5924,7 +5992,7 @@ cat >>$cf_edit_man <<CF_EOF
 	sed	-f "$cf_man_alias" \\
 CF_EOF
 
-if test -f "$MANPAGE_RENAMES" ; then
+if test "$MANPAGE_RENAMES" != no ; then
 cat >>$cf_edit_man <<CF_EOF
 		< "\$i" | sed -f `pwd`/edit_man.sed >\$TMP
 CF_EOF
@@ -6351,6 +6419,21 @@ AC_DEFUN([CF_OBJ_SUBDIR],
 			$2='obj_s' ;;
 		esac
 	esac
+])dnl
+dnl ---------------------------------------------------------------------------
+dnl CF_OUTPUT_MANPAGE_RENAMES version: 2 updated: 2022/10/22 19:12:31
+dnl -------------------------
+dnl This runs in the output step to config.status, after man_db.renames has
+dnl been generated.
+AC_DEFUN([CF_OUTPUT_MANPAGE_RENAMES],
+[
+AC_REQUIRE([CF_MANPAGE_RENAMES])
+if test "$MANPAGE_RENAMES" != no ; then
+	# Construct a sed-script to perform renaming within man-pages
+	test -n "$verbose" && echo "creating edit_man.sed"
+	test ! -d man && mkdir man
+	FGREP="${FGREP-grep -F}" $SHELL "$srcdir/man/make_sed.sh" "$MANPAGE_RENAMES" >./edit_man.sed
+fi
 ])dnl
 dnl ---------------------------------------------------------------------------
 dnl CF_PATHSEP version: 8 updated: 2021/01/01 13:31:04
@@ -6869,7 +6952,7 @@ fi
 AC_SUBST(LDCONFIG)
 ])dnl
 dnl ---------------------------------------------------------------------------
-dnl CF_PROG_LINT version: 4 updated: 2019/11/20 18:55:37
+dnl CF_PROG_LINT version: 5 updated: 2022/08/20 15:44:13
 dnl ------------
 AC_DEFUN([CF_PROG_LINT],
 [
@@ -6880,6 +6963,7 @@ case "x$LINT" in
 	;;
 esac
 AC_SUBST(LINT_OPTS)
+AC_SUBST(LINT_LIBS)
 ])dnl
 dnl ---------------------------------------------------------------------------
 dnl CF_PROG_LN_S version: 2 updated: 2010/08/14 18:25:37
@@ -8333,34 +8417,20 @@ else
 fi
 ])
 dnl ---------------------------------------------------------------------------
-dnl CF_TRY_XOPEN_SOURCE version: 3 updated: 2021/08/28 15:20:37
+dnl CF_TRY_XOPEN_SOURCE version: 4 updated: 2022/09/10 15:16:16
 dnl -------------------
 dnl If _XOPEN_SOURCE is not defined in the compile environment, check if we
 dnl can define it successfully.
 AC_DEFUN([CF_TRY_XOPEN_SOURCE],[
 AC_CACHE_CHECK(if we should define _XOPEN_SOURCE,cf_cv_xopen_source,[
-	AC_TRY_COMPILE([
-#include <stdlib.h>
-#include <string.h>
-#include <sys/types.h>
-],[
-#ifndef _XOPEN_SOURCE
-make an error
-#endif],
+	AC_TRY_COMPILE(CF__XOPEN_SOURCE_HEAD,CF__XOPEN_SOURCE_BODY,
 	[cf_cv_xopen_source=no],
 	[cf_save="$CPPFLAGS"
 	 CF_APPEND_TEXT(CPPFLAGS,-D_XOPEN_SOURCE=$cf_XOPEN_SOURCE)
-	 AC_TRY_COMPILE([
-#include <stdlib.h>
-#include <string.h>
-#include <sys/types.h>
-],[
-#ifdef _XOPEN_SOURCE
-make an error
-#endif],
-	[cf_cv_xopen_source=no],
-	[cf_cv_xopen_source=$cf_XOPEN_SOURCE])
-	CPPFLAGS="$cf_save"
+	 AC_TRY_COMPILE(CF__XOPEN_SOURCE_HEAD,CF__XOPEN_SOURCE_BODY,
+		[cf_cv_xopen_source=no],
+		[cf_cv_xopen_source=$cf_XOPEN_SOURCE])
+		CPPFLAGS="$cf_save"
 	])
 ])
 
@@ -9827,7 +9897,7 @@ fi
 AC_SUBST(no_x11_rgb)
 ])dnl
 dnl ---------------------------------------------------------------------------
-dnl CF_XOPEN_SOURCE version: 59 updated: 2021/08/28 15:20:37
+dnl CF_XOPEN_SOURCE version: 62 updated: 2022/10/02 19:55:56
 dnl ---------------
 dnl Try to get _XOPEN_SOURCE defined properly that we can use POSIX functions,
 dnl or adapt to the vendor's definitions to get equivalent functionality,
@@ -9878,7 +9948,7 @@ case "$host_os" in
 	cf_xopen_source="-D_SGI_SOURCE"
 	cf_XOPEN_SOURCE=
 	;;
-(linux*|uclinux*|gnu*|mint*|k*bsd*-gnu|cygwin)
+(linux*gnu|linux*gnuabi64|linux*gnuabin32|linux*gnueabi|linux*gnueabihf|linux*gnux32|uclinux*|gnu*|mint*|k*bsd*-gnu|cygwin)
 	CF_GNU_SOURCE($cf_XOPEN_SOURCE)
 	;;
 (minix*)
@@ -9927,7 +9997,13 @@ case "$host_os" in
 	;;
 (*)
 	CF_TRY_XOPEN_SOURCE
+	cf_save_xopen_cppflags="$CPPFLAGS"
 	CF_POSIX_C_SOURCE($cf_POSIX_C_SOURCE)
+	# Some of these niche implementations use copy/paste, double-check...
+	CF_VERBOSE(checking if _POSIX_C_SOURCE inteferes)
+	AC_TRY_COMPILE(CF__XOPEN_SOURCE_HEAD,CF__XOPEN_SOURCE_BODY,,[
+		AC_MSG_WARN(_POSIX_C_SOURCE definition is not usable)
+		CPPFLAGS="$cf_save_xopen_cppflags"])
 	;;
 esac
 
@@ -9971,3 +10047,23 @@ dnl ------------------
 dnl Trim something using sed, then trim extra whitespace
 dnl $1 = extra parameters, e.g., in CF_STRIP_G_OPT
 define([CF__SED_TRIMBLANKS],[sed ifelse($1,,,[$1] )-e 's%[[	]]% %g' -e 's% [[ ]]*% %g' -e 's%^ %%' -e 's% [$]%%'])dnl
+dnl ---------------------------------------------------------------------------
+dnl CF__XOPEN_SOURCE_BODY version: 1 updated: 2022/09/10 15:17:35
+dnl ---------------------
+dnl body of test when test-compiling for _XOPEN_SOURCE check
+define([CF__XOPEN_SOURCE_BODY],
+[
+#ifndef _XOPEN_SOURCE
+make an error
+#endif
+])
+dnl ---------------------------------------------------------------------------
+dnl CF__XOPEN_SOURCE_HEAD version: 1 updated: 2022/09/10 15:17:03
+dnl ---------------------
+dnl headers to include when test-compiling for _XOPEN_SOURCE check
+define([CF__XOPEN_SOURCE_HEAD],
+[
+#include <stdlib.h>
+#include <string.h>
+#include <sys/types.h>
+])

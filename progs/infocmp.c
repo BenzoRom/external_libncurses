@@ -43,7 +43,7 @@
 
 #include <dump_entry.h>
 
-MODULE_ID("$Id: infocmp.c,v 1.153 2022/03/05 16:15:48 tom Exp $")
+MODULE_ID("$Id: infocmp.c,v 1.156 2022/09/24 10:13:06 tom Exp $")
 
 #define MAX_STRING	1024	/* maximum formatted string */
 
@@ -905,7 +905,6 @@ analyze_string(const char *name, const char *cap, TERMTYPE2 *tp)
 		       sizeof(buf2));
 	    _nc_STRNCPY(buf3, sp + csi, len);
 	    buf3[len] = '\0';
-	    len += (size_t) csi + 1;
 
 	    expansion = lookup_params(std_modes, buf2, buf3);
 	}
@@ -926,7 +925,6 @@ analyze_string(const char *name, const char *cap, TERMTYPE2 *tp)
 		       sizeof(buf2));
 	    _nc_STRNCPY(buf3, sp + csi + 1, len);
 	    buf3[len] = '\0';
-	    len += (size_t) csi + 2;
 
 	    expansion = lookup_params(private_modes, buf2, buf3);
 	}
@@ -1727,7 +1725,7 @@ main(int argc, char *argv[])
 
 	case 'v':
 	    itrace = (unsigned) optarg_to_number();
-	    set_trace_level(itrace);
+	    use_verbosity(itrace);
 	    break;
 
 	case 'W':

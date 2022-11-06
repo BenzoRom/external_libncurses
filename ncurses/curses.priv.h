@@ -35,7 +35,7 @@
  ****************************************************************************/
 
 /*
- * $Id: curses.priv.h,v 1.650 2022/05/01 14:41:33 tom Exp $
+ * $Id: curses.priv.h,v 1.653 2022/10/23 13:29:26 tom Exp $
  *
  *	curses.priv.h
  *
@@ -139,6 +139,10 @@ extern int errno;
 # if HAVE_STDINT_H
 #  include <stdint.h>
 # endif
+#endif
+
+#ifndef PRIxPTR
+# define PRIxPTR	"lx"
 #endif
 
 /* include signal.h before curses.h to work-around defect in glibc 2.1.3 */
@@ -672,8 +676,13 @@ extern NCURSES_EXPORT(int) _nc_sigprocmask(int, const sigset_t *, sigset_t *);
 #define _nc_lock_global(name)	/* nothing */
 #define _nc_try_global(name)    0
 #define _nc_unlock_global(name)	/* nothing */
-
 #endif /* USE_PTHREADS */
+
+#if USE_PTHREADS_EINTR
+extern NCURSES_EXPORT(void) _nc_set_read_thread(bool);
+#else
+#define _nc_set_read_thread(enable)	/* nothing */
+#endif
 
 /*
  * When using sp-funcs, locks are targeted to SCREEN-level granularity.

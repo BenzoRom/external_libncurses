@@ -26,7 +26,7 @@
 -- sale, use or other dealings in this Software without prior written        --
 -- authorization.                                                            --
 -------------------------------------------------------------------------------
--- $Id: NEWS,v 1.3839 2022/07/28 20:18:34 tom Exp $
+-- $Id: NEWS,v 1.3875 2022/11/05 22:24:03 tom Exp $
 -------------------------------------------------------------------------------
 
 This is a log of changes that ncurses has gone through since Zeyd started
@@ -45,6 +45,100 @@ See the AUTHORS file for the corresponding full names.
 
 Changes through 1.9.9e did not credit all contributions;
 it is not possible to add this information.
+
+20221105
+	+ regenerate configure scripts with autoconf 2.52.20221009
+	+ modify "--with-manpage-format" to support bzip2 and xz compression
+	  (prompted by discussion with Sam James).
+	+ modify make-tar.sh scripts to make timestamps more predictable.
+
+20221029
+	+ improve curs_slk.3x discussion of extensions and portability (report
+	  by Bill Gray).
+
+20221023
+	+ change man_db.renames to template, to handle ncurses*-config script
+	  with the extra-suffix configure option.
+
+20221015
+	+ fix another memory-leak in tic.
+	+ update install-sh script from autoconf, to fix install problem for
+	  Ada95 with Arch; as noted in
+	  https://lists.gnu.org/archive/html/automake/2018-09/msg00005.html
+	  there are unaddressed issues.
+	+ update CF_XOPEN_SOURCE, adding GNU libc suffixes for abi64, abin32,
+	  x32 (report by Sven Joachim):
+	+ correct ifdef's for _nc_set_read_thread() (patch by Mikhail Korolev,
+	  cf: 20220813).
+
+20221008
+	+ correct a switch-statement case in configure script to allow for test
+	  builds with ABI=7.
+	+ modify misc/gen-pkgconfig.in to allow for the case where the library
+	  directory does not yet exist, since this is processed before doing an
+	  install (report by Michal Liszcz).
+
+20221001
+	+ modify configure/scripts to work around interference by GNU grep 3.8
+	  (report by Sam James).
+	+ update CF_XOPEN_SOURCE, adding variants "gnueabi" and "gnueabihf" to
+	  get _DEFAULT_SOURCE special case (report by Adam Sampson)
+
+20220924
+	+ modify configure macro CF_BUILD_CC to check if the build-compiler
+	  works, rather than that it is different from the cross-compiler, e.g.,
+	  to accommodate a compiler which can be used for either purpose with
+	  different flags (report by Mikhail Korolev).
+	+ fix another memory-leak in tic.
+	+ correct change for cppcheck in menu library (report/analysis by
+	  "tuxway", cf: 20220903).
+	+ update config.guess, config.sub
+
+20220917
+	+ reduce memory-leak in tic by separating allocations for struct entry
+	  from TERMTYPE2 (cf: 20220430).
+	+ improve interaction between tic -v option and NCURSES_TRACE, by
+	  processing the latter only when -v option does not set _nc_tracing.
+	+ modify curses_trace() to show the trace-mask as symbols, e.g.,
+	  TRACE_ORDINARY, DEBUG_LEVEL(3).
+
+20220910
+	+ amend verbose-option change to make this affect level 3, e.g., using
+	  "tic -cv3 terminfo".
+	+ work around musl's nonstandard use of feature test macros by adding
+	  a definition for NCURSES_WIDECHAR to the generated ".pc" and *-config
+	  files (report by Sam James).
+
+20220903
+	+ modify verbose-option of infocmp, tic, toe to enable debug-tracing
+	  if that is configured.
+
+20220827
+	+ modify configure scripts to use overlooked cases for LD and
+	  PKG_CONFIG variables (report by Alan Webb, Gentoo #866398).
+	+ modify nsterm to use xterm+alt1049 (report by Paul Handly) -TD
+	+ modify putty to use xterm+alt1049 -TD
+
+20220820
+	+ fix some cppcheck warnings, mostly style, in ncurses and c++
+	  libraries and progs directory.
+	+ add curses_trace to ifdef's for START_TRACE in test/test.priv.h
+	+ update config.guess
+
+20220813
+	+ modify delscreen to more effectively delete all windows on the given
+	  screen.
+	+ amend portability note for delwin in manual page.
+	+ adapt test/test_delwin.c from example by Bill Gray.
+	+ account for prescreen data if freeing leaks in pthread-configuration
+	+ split-out _nc_set_read_thread(), to reduce compiler warnings about
+	  pthread_self(), which may/may not be a weak symbol.
+	+ improve pthread-configuration for test/worm.c
+
+20220806
+	+ amend end_of_stream() to allow for input files without a final
+	  newline.
+	+ check for non-textfiles to tic.
 
 20220729
 	+ fixes to build with dietlibc:
